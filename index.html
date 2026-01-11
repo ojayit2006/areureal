@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>are you real</title>
+
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --fg:#e5e5e5;
+  --red:#b10000;
+}
+
+* {
+  box-sizing:border-box;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,body {
+  margin:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  color:var(--fg);
+  font-family:"IBM Plex Mono", monospace;
+  overflow:hidden;
+  cursor:none;
+}
+
+#bg {
+  position:fixed;
+  inset:0;
+  background-size:cover;
+  background-position:center;
+  pointer-events:none;
+}
+
+#app {
+  position:fixed;
+  inset:0;
+}
+
+#cursor {
+  position:fixed;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:var(--fg);
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  z-index:3;
+}
+
+.center {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  font-size:14px;
+  line-height:1.4;
+  pointer-events:none;
+}
+
+.bar-wrap {
+  position:absolute;
+  top:55%;
+  left:50%;
+  transform:translateX(-50%);
+  width:260px;
+  height:6px;
+  border:1px solid #555;
+}
+
+.bar {
+  height:100%;
+  width:30%;
+  background:#888;
+}
+
+.option {
+  margin:6px 0;
+  cursor:pointer;
+  pointer-events:auto;
+}
+
+.timer {
+  font-size:22px;
+  letter-spacing:0.08em;
+}
+
+.red { color:var(--red); }
+</style>
+</head>
+
+<body>
+
+<div id="bg"></div>
+<div id="app"></div>
+<div id="cursor"></div>
+
+<script>
+/* ========== CORE ========== */
+
+const app = document.getElementById("app");
+const bg = document.getElementById("bg");
+const cursor = document.getElementById("cursor");
+
+let mouse = { x: innerWidth/2, y: innerHeight/2 };
+let step = 0;
+
+/* ========== BACKGROUNDS ========== */
+
+const BG = {
+  entry:"liminal_path.jpg",
+  dot:"field_void.jpg",
+  timer:"office_empty.jpg",
+  scale:"green_corridor.jpg",
+  transition:"checker_hall.jpg",
+  end:"house_night.jpg"
+};
+
+function setBackground(img){
+  bg.style.backgroundImage = `url('${img}')`;
+}
+
+/* ========== CURSOR ========== */
+
+window.addEventListener("mousemove", e=>{
+  mouse.x=e.clientX;
+  mouse.y=e.clientY;
+});
+
+setInterval(()=>{
+  cursor.style.left=mouse.x+"px";
+  cursor.style.top=mouse.y+"px";
+},16);
+
+/* ========== TYPEWRITER ========== */
+
+function typeText(html, done, speed=40){
+  app.innerHTML="";
+  const el=document.createElement("div");
+  el.className="center";
+  app.appendChild(el);
+
+  const plain=html.replace(/<[^>]*>/g,"");
+  let i=0;
+
+  const t=setInterval(()=>{
+    el.textContent=plain.slice(0,i++);
+    if(i>plain.length){
+      clearInterval(t);
+      el.innerHTML=html;
+      if(done) done();
+    }
+  },speed);
+}
+
+/* ========== FLOW ========== */
+
+function next(){
+  if(step < flow.length) flow[step++]();
+}
+
+function cut(fn,delay=300){
+  app.innerHTML="";
+  setTimeout(fn,delay);
+}
+
+/* ========== ENTRY ========== */
+
+cut(()=>{
+  setBackground(BG.entry);
+  typeText("are you real", ()=> setTimeout(next,600));
+});
+
+/* ========== GAME 1 — DOT ========== */
+
+function gameDot(){
+  setBackground(BG.dot);
+  app.innerHTML="";
+
+  const dot=document.createElement("div");
+  dot.style.cssText="position:absolute;width:10px;height:10px;border-radius:50%;background:#e5e5e5;";
+  app.appendChild(dot);
+
+  let x=innerWidth/2, y=innerHeight/2;
+  let hits=0;
+
+  function place(){
+    dot.style.left=x+"px";
+    dot.style.top=y+"px";
+  }
+  place();
+
+  const loop=setInterval(()=>{
+    const d=Math.hypot(mouse.x-x,mouse.y-y);
+    if(d<40){
+      hits++;
+      x=Math.random()*(innerWidth-60)+30;
+      y=Math.random()*(innerHeight-60)+30;
+      place();
+    }
+    if(hits>=3){
+      clearInterval(loop);
+      cut(()=> typeText("you tried to <span class='red'>control</span> it", ()=> setTimeout(next,600)));
+    }
+  },60);
+
+  setTimeout(()=>{
+    if(hits<3){
+      clearInterval(loop);
+      cut(()=> typeText("avoidance detected", ()=> setTimeout(next,600)));
+    }
+  },6000);
+}
+
+/* ========== GAME 2 — TIMER ========== */
+
+function gameTimer(){
+  setBackground(BG.timer);
+  app.innerHTML="<div class='center timer'></div>";
+  const el=document.querySelector(".timer");
+
+  let t=10, speed=1;
+
+  window.onclick=()=> speed=Math.min(speed+0.6,6);
+  window.onmousemove=()=> speed=Math.min(speed+0.004,6);
+
+  const tick=setInterval(()=>{
+    t-=0.016*speed;
+    const v=Math.max(0,Math.floor(t));
+    el.textContent=`00:${String(v).padStart(2,"0")}`;
+    if(v===0){
+      clearInterval(tick);
+      window.onclick=null;
+      window.onmousemove=null;
+      cut(()=> typeText("time was <span class='red'>not</span> the problem", ()=> setTimeout(next,600)));
+    }
+  },16);
+}
+
+/* ========== GAME 3 — SCALE (NEW) ========== */
+
+function gameScale(){
+  setBackground(BG.scale);
+
+  typeText("measuring compliance", ()=>{
+    const barWrap=document.createElement("div");
+    barWrap.className="bar-wrap";
+    const bar=document.createElement("div");
+    bar.className="bar";
+    barWrap.appendChild(bar);
+    app.appendChild(barWrap);
+
+    let value=30;
+    let rate=0.08;
+
+    window.onclick=()=> rate+=0.15;
+
+    const fill=setInterval(()=>{
+      value+=rate;
+      bar.style.width=Math.min(value,100)+"%";
+      if(value>=100){
+        clearInterval(fill);
+        window.onclick=null;
+        cut(()=> typeText("acceptable variance detected", ()=> setTimeout(next,600)));
+      }
+    },60);
+  });
+}
+
+/* ========== TRANSITION ========== */
+
+function transitionLine(){
+  setBackground(BG.transition);
+  typeText("interaction did not alter the sequence", ()=> setTimeout(next,700));
+}
+
+/* ========== QUIZZES ========== */
+
+function quiz(prompt, options, response){
+  app.innerHTML="";
+  const box=document.createElement("div");
+  box.className="center";
+  app.appendChild(box);
+
+  let i=0;
+  const t=setInterval(()=>{
+    box.textContent=prompt.slice(0,i++);
+    if(i>prompt.length){
+      clearInterval(t);
+      setTimeout(()=>{
+        options.forEach(o=>{
+          const opt=document.createElement("div");
+          opt.className="option";
+          opt.textContent=o;
+          opt.onclick=()=> typeText(response, ()=> setTimeout(next,600));
+          box.appendChild(opt);
+        });
+      },300);
+    }
+  },40);
+}
+
+function quiz1(){
+  quiz("most days you feel",
+    ["replaceable","tolerated","unnoticed","unnecessary"],
+    "this role is common"
+  );
+}
+
+function quiz2(){
+  quiz("if you disappeared",
+    ["people would adapt","people would notice briefly","systems would continue","nothing would change"],
+    "continuity confirmed"
+  );
+}
+
+/* ========== END ========== */
+
+function end(){
+  setBackground(BG.end);
+  typeText("you participated<br><br>that was sufficient");
+}
+
+/* ========== FLOW ========== */
+
+const flow=[
+  gameDot,
+  gameTimer,
+  gameScale,
+  transitionLine,
+  quiz1,
+  quiz2,
+  end
+];
+</script>
+
+</body>
+</html>
